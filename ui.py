@@ -28,8 +28,8 @@ class App(tk.Tk):
         super().__init__()
         theme.setup(self)
         self.title("ProdBuddy")
-        self.geometry(f"{theme.px(1120)}x{theme.px(760)}")
-        self.minsize(theme.px(900), theme.px(620))
+        self.geometry(f"{theme.px(1100)}x{theme.px(720)}")
+        self.minsize(theme.px(920), theme.px(560))
 
         self.settings = settings.load()
         self.colors = theme.apply(self, self.settings["dark"])
@@ -44,6 +44,7 @@ class App(tk.Tk):
         )
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.apply_colors(self.colors)
+
         self.panel = TasksPanel(self, on_change=self.sidebar.refresh_today)
         self.panel.pack(side="left", fill="both", expand=True)
         self.panel.apply_colors(self.colors)

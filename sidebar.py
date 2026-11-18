@@ -1,14 +1,20 @@
 """Navigation sidebar for ProdBuddy."""
 import tkinter as tk
-from tkinter import simpledialog, messagebox
+from tkinter import ttk, simpledialog, messagebox
 
 import db
-import logic
+import theme
 
 
 class Sidebar(tk.Frame):
     def __init__(self, master, on_select, on_export, on_import, on_theme, dark=False):
-        super().__init__(master, width=230, padx=12, pady=14)
+        super().__init__(
+            master,
+            width=theme.px(250),
+            padx=theme.px(14),
+            pady=theme.px(16),
+            highlightthickness=1,
+        )
         self.pack_propagate(False)
         self.on_select = on_select
         self.on_export = on_export
@@ -16,29 +22,91 @@ class Sidebar(tk.Frame):
         self.on_theme = on_theme
         self.dark = dark
         self.colors = None
+        self._active_view = "today"
+        self._project_ids = []
 
-        tk.Label(self, text="ProdBuddy", font=("Segoe UI", 17, "bold")).pack(anchor="w", pady=(2, 18))
-        tk.Button(self, text="Today", anchor="w", command=lambda: self.select("today")).pack(fill="x", pady=2)
-        tk.Button(self, text="All tasks", anchor="w", command=lambda: self.select("all")).pack(fill="x", pady=2)
-        tk.Label(self, text="PROJECTS", font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(20, 6))
-        self.projects = tk.Listbox(self, height=15, activestyle="none", borderwidth=0, highlightthickness=0)
+        self.brand_label = ttk.Label(self, text="ProdBuddy", style="SidebarBrand.TLabel")
+        self.brand_label.pack(anchor="w", pady=(0, theme.px(14)))
+
+        self.today_btn = ttk.Button(
+            self, text="Today", style="NavActive.TButton", command=lambda: self.select("today")
+        )
+        self.today_btn.pack(fill="x", pady=theme.px(2))
+
+        self.all_btn = ttk.Button(
+            self, text="All tasks", style="Nav.TButton", command=lambda: self.select("all")
+        )
+        self.all_btn.pack(fill="x", pady=theme.px(2))
+
+        self.projects_label = ttk.Label(self, text="PROJECTS", style="SidebarSection.TLabel")
+        self.projects_label.pack(anchor="w", pady=(theme.px(18), theme.px(6)))
+
+        list_frame = ttk.Frame(self, style="Sidebar.TFrame")
+        list_frame.pack(fill="both", expand=True)
+
+        self.projects = tk.Listbox(
+            list_frame,
+            height=10,
+            activestyle="none",
+            borderwidth=0,
+            highlightthickness=1,
+            relief="flat",
+            font=("Segoe UI", 10),
+            exportselection=False,
+        )
         self.projects.pack(fill="both", expand=True)
         self.projects.bind("<<ListboxSelect>>", self._project_selected)
-        actions = tk.Frame(self)
-        actions.pack(fill="x", pady=(8, 4))
-        tk.Button(actions, text="+ Project", command=self.add_project).pack(side="left", fill="x", expand=True)
-        tk.Button(actions, text="Rename", command=self.rename_project).pack(side="left", padx=(5, 0))
-        tk.Button(actions, text="Delete", command=self.delete_project).pack(side="left", padx=(5, 0))
-        tk.Button(self, text="Export data", command=self.on_export).pack(fill="x", pady=(12, 3))
-        tk.Button(self, text="Import data", command=self.on_import).pack(fill="x", pady=3)
-        self.theme_button = tk.Button(self, text="Use light theme" if dark else "Use dark theme",
-                                       command=self.toggle_theme)
-        self.theme_button.pack(fill="x", pady=(3, 0))
-        self._project_ids = []
-        self.refresh()
+
+        actions = ttk.Frame(self, style="Sidebar.TFrame")
+        actions.pack(fill="x", pady=(theme.px(8), theme.px(10)))
+        actions.columnconfigure(0, weight=1)
+        actions.columnconfigure(1, weight=1)
+        actions.columnconfigure(2, weight=1)
+
+        ttk.Button(actions, text="+ New", style="Sidebar.TButton", command=self.add_project).grid(
+            row=0, column=0, sticky="ew", padx=(0, theme.px(3))
+        )
+        ttk.Button(actions, text="Rename", style="Sidebar.TButton", command=self.rename_project).grid(
+            row=0, column=1, sticky="ew", padx=theme.px(3)
+        )
+        ttk.Button(actions, text="Delete", style="Sidebar.TButton", command=self.delete_project).grid(
+            row=0, column=2, sticky="ew", padx=(theme.px(3), 0)
+        )
+
+        footer = ttk.Frame(self, style="Sidebar.TFrame")
+        footer.pack(fill="x", side="bottom")
+        footer.columnconfigure(0, weight=1)
+        footer.columnconfigure(1, weight=1)
+
+        ttk.Button(footer, text="Export", style="Sidebar.TButton", command=self.on_export).grid(
+            row=0, column=0, sticky="ew", padx=(0, theme.px(3)), pady=(0, theme.px(6))
+        )
+        ttk.Button(footer, text="Import", style="Sidebar.TButton", command=self.on_import).grid(
+            row=0, column=1, sticky="ew", padx=(theme.px(3), 0), pady=(0, theme.px(6))
+        )
+
+        self.theme_button = ttk.Button(
+            footer,
+            text="Light theme" if dark else "Dark theme",
+            style="Sidebar.TButton",
+            command=self.toggle_theme,
+        )
+        self.theme_button.grid(row=1, column=0, columnspan=2, sticky="ew")
+
+        self.refresh(select="today")
+
+    def _update_nav_styles(self):
+        self.today_btn.configure(
+            style="NavActive.TButton" if self._active_view == "today" else "Nav.TButton"
+        )
+        self.all_btn.configure(
+            style="NavActive.TButton" if self._active_view == "all" else "Nav.TButton"
+        )
 
     def select(self, view):
+        self._active_view = view
         self.projects.selection_clear(0, tk.END)
+        self._update_nav_styles()
         self.on_select(view)
 
     def _project_selected(self, _event=None):
@@ -46,24 +114,29 @@ class Sidebar(tk.Frame):
         if selection:
             index = selection[0]
             if index < len(self._project_ids):
-                self.on_select(self._project_ids[index])
+                project_id = self._project_ids[index]
+                self._active_view = project_id
+                self._update_nav_styles()
+                self.on_select(project_id)
 
     def refresh(self, select=None):
+        if select is not None:
+            self._active_view = select
         self.projects.delete(0, tk.END)
         rows = db.get_projects()
         self._project_ids = []
         for project in rows:
             self._project_ids.append(project["id"])
-            self.projects.insert(tk.END, project["name"])
-        if select not in (None, "today", "all"):
+            self.projects.insert(tk.END, f"  {project['name']}")
+        if self._active_view not in (None, "today", "all"):
             try:
-                index = self._project_ids.index(int(select))
+                index = self._project_ids.index(int(self._active_view))
                 self.projects.selection_set(index)
             except (ValueError, TypeError):
                 pass
+        self._update_nav_styles()
 
     def refresh_today(self):
-        # Kept as a small hook for the task panel after task changes.
         return None
 
     def add_project(self):
@@ -83,10 +156,13 @@ class Sidebar(tk.Frame):
             messagebox.showinfo("Select a project", "Choose a project first.", parent=self)
             return
         project = db.get_project(project_id)
-        name = simpledialog.askstring("Rename project", "New name:", initialvalue=project["name"], parent=self)
+        name = simpledialog.askstring(
+            "Rename project", "New name:", initialvalue=project["name"], parent=self
+        )
         if name and name.strip():
             db.rename_project(project_id, name.strip())
             self.refresh(select=project_id)
+            self.on_select(project_id)
 
     def delete_project(self):
         project_id = self._selected_project_id()
@@ -94,21 +170,31 @@ class Sidebar(tk.Frame):
             messagebox.showinfo("Select a project", "Choose a project first.", parent=self)
             return
         project = db.get_project(project_id)
-        if messagebox.askyesno("Delete project", f"Delete '{project['name']}' and all its tasks?", parent=self):
+        if messagebox.askyesno(
+            "Delete project", f"Delete '{project['name']}' and all its tasks?", parent=self
+        ):
             db.delete_project(project_id)
-            self.refresh()
+            self.refresh(select="today")
             self.on_select("today")
 
     def toggle_theme(self):
         self.dark = not self.dark
-        self.theme_button.configure(text="Use light theme" if self.dark else "Use dark theme")
+        self.theme_button.configure(text="Light theme" if self.dark else "Dark theme")
         self.on_theme(self.dark)
 
     def apply_colors(self, colors):
         self.colors = colors
-        self.configure(bg=colors["panel"])
-        for child in self.winfo_children():
-            try:
-                child.configure(bg=colors["panel"], fg=colors["fg"])
-            except tk.TclError:
-                pass
+        self.configure(
+            bg=colors["sidebar"],
+            highlightbackground=colors["border"],
+            highlightcolor=colors["border"],
+        )
+        self.projects.configure(
+            bg=colors["panel"],
+            fg=colors["fg"],
+            selectbackground=colors["selected"],
+            selectforeground=colors["accent"],
+            highlightbackground=colors["border"],
+            highlightcolor=colors["accent"],
+        )
+        self._update_nav_styles()

@@ -34,16 +34,21 @@ DARK = {
     "danger": "#F07878",
 }
 
+_SCALE = 1.0
+
 
 def px(value):
-    return int(value)
+    return int(round(value * _SCALE))
 
 
 def setup(root):
+    global _SCALE
     try:
-        root.tk.call("tk", "scaling", root.winfo_fpixels("1i") / 72.0)
+        dpi = root.winfo_fpixels("1i")
+        _SCALE = max(1.0, dpi / 96.0)
+        root.tk.call("tk", "scaling", dpi / 72.0)
     except tk.TclError:
-        pass
+        _SCALE = 1.0
 
 
 def apply(root, dark=False):
@@ -63,6 +68,7 @@ def apply(root, dark=False):
 
     style.configure("TFrame", background=colors["bg"])
     style.configure("Panel.TFrame", background=colors["panel"])
+    style.configure("Sidebar.TFrame", background=colors["sidebar"])
 
     style.configure(
         "TLabel",
@@ -76,17 +82,34 @@ def apply(root, dark=False):
     )
     style.configure(
         "Heading.TLabel",
-        font=("Segoe UI", 24, "bold"),
+        font=("Segoe UI", 20, "bold"),
         background=colors["bg"],
         foreground=colors["fg"],
+    )
+    style.configure(
+        "SidebarBrand.TLabel",
+        font=("Segoe UI", 16, "bold"),
+        background=colors["sidebar"],
+        foreground=colors["fg"],
+    )
+    style.configure(
+        "SidebarSection.TLabel",
+        font=("Segoe UI", 9, "bold"),
+        background=colors["sidebar"],
+        foreground=colors["muted"],
     )
 
     style.configure(
         "TButton",
-        padding=(12, 8),
-        borderwidth=0,
+        padding=(px(10), px(6)),
+        borderwidth=1,
+        relief="flat",
         background=colors["panel"],
         foreground=colors["fg"],
+        bordercolor=colors["border"],
+        lightcolor=colors["panel"],
+        darkcolor=colors["panel"],
+        focuscolor=colors["selected"],
     )
     style.map(
         "TButton",
@@ -94,14 +117,19 @@ def apply(root, dark=False):
             ("active", colors["selected"]),
             ("pressed", colors["border"]),
         ],
+        foreground=[("disabled", colors["muted"])],
+        bordercolor=[("active", colors["accent"])],
     )
 
     style.configure(
         "Primary.TButton",
-        padding=(14, 8),
+        padding=(px(14), px(6)),
+        borderwidth=0,
+        relief="flat",
         background=colors["accent"],
         foreground="#FFFFFF",
         font=("Segoe UI", 10, "bold"),
+        focuscolor=colors["accent_hover"],
     )
     style.map(
         "Primary.TButton",
@@ -113,12 +141,96 @@ def apply(root, dark=False):
     )
 
     style.configure(
+        "Danger.TButton",
+        padding=(px(10), px(6)),
+        borderwidth=1,
+        relief="flat",
+        background=colors["panel"],
+        foreground=colors["danger"],
+        bordercolor=colors["border"],
+    )
+    style.map(
+        "Danger.TButton",
+        background=[
+            ("active", colors["danger"]),
+            ("pressed", colors["danger"]),
+        ],
+        foreground=[
+            ("active", "#FFFFFF"),
+            ("pressed", "#FFFFFF"),
+        ],
+    )
+
+    style.configure(
+        "Nav.TButton",
+        padding=(px(10), px(7)),
+        borderwidth=0,
+        relief="flat",
+        anchor="w",
+        background=colors["sidebar"],
+        foreground=colors["fg"],
+        font=("Segoe UI", 10),
+    )
+    style.map(
+        "Nav.TButton",
+        background=[
+            ("active", colors["selected"]),
+            ("pressed", colors["selected"]),
+        ],
+    )
+
+    style.configure(
+        "NavActive.TButton",
+        padding=(px(10), px(7)),
+        borderwidth=0,
+        relief="flat",
+        anchor="w",
+        background=colors["selected"],
+        foreground=colors["accent"],
+        font=("Segoe UI", 10, "bold"),
+    )
+    style.map(
+        "NavActive.TButton",
+        background=[
+            ("active", colors["selected"]),
+            ("pressed", colors["selected"]),
+        ],
+    )
+
+    style.configure(
+        "Sidebar.TButton",
+        padding=(px(8), px(5)),
+        borderwidth=1,
+        relief="flat",
+        background=colors["panel"],
+        foreground=colors["fg"],
+        bordercolor=colors["border"],
+        font=("Segoe UI", 9),
+    )
+    style.map(
+        "Sidebar.TButton",
+        background=[
+            ("active", colors["selected"]),
+            ("pressed", colors["border"]),
+        ],
+        bordercolor=[("active", colors["accent"])],
+    )
+
+    style.configure(
         "TEntry",
-        padding=9,
+        padding=(px(8), px(6)),
         fieldbackground=colors["input"],
         foreground=colors["fg"],
         bordercolor=colors["border"],
+        lightcolor=colors["border"],
+        darkcolor=colors["border"],
         insertcolor=colors["fg"],
+    )
+    style.map(
+        "TEntry",
+        bordercolor=[("focus", colors["accent"])],
+        lightcolor=[("focus", colors["accent"])],
+        darkcolor=[("focus", colors["accent"])],
     )
 
     style.configure(
@@ -126,22 +238,39 @@ def apply(root, dark=False):
         background=colors["panel"],
         fieldbackground=colors["panel"],
         foreground=colors["fg"],
-        rowheight=40,
-        borderwidth=0,
+        rowheight=px(36),
+        borderwidth=1,
+        relief="solid",
+        bordercolor=colors["border"],
+        lightcolor=colors["border"],
+        darkcolor=colors["border"],
         font=("Segoe UI", 10),
     )
     style.configure(
         "Treeview.Heading",
-        background=colors["bg"],
+        background=colors["sidebar"],
         foreground=colors["muted"],
         relief="flat",
-        padding=(10, 10),
+        borderwidth=0,
+        padding=(px(8), px(8)),
         font=("Segoe UI", 9, "bold"),
+    )
+    style.map(
+        "Treeview.Heading",
+        background=[("active", colors["selected"])],
     )
     style.map(
         "Treeview",
         background=[("selected", colors["selected"])],
         foreground=[("selected", colors["fg"])],
+    )
+
+    style.configure(
+        "Vertical.TScrollbar",
+        background=colors["sidebar"],
+        troughcolor=colors["panel"],
+        borderwidth=0,
+        arrowsize=px(12),
     )
 
     return colors
