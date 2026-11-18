@@ -46,12 +46,14 @@ class TasksPanel(tk.Frame):
             self.tree.column(col, width=width, anchor="w")
         self.tree.pack(fill="both", expand=True)
         self.tree.bind("<<TreeviewSelect>>", self._selection_changed)
+        self.tree.bind("<Button-1>", self._click_status)
         self.tree.bind("<Double-1>", lambda _e: self.edit_task())
 
         controls = ttk.Frame(self)
         controls.pack(fill="x", pady=(10, 4))
         for label, command in [
-            ("Complete / reopen", self.toggle_done), ("Edit", self.edit_task),
+            ("Complete / reopen", self.toggle_done), ("Set due date", self.edit_due_date),
+            ("Edit", self.edit_task),
             ("Delete", self.delete_task), ("Start / stop timer", self.toggle_timer),
             ("Task notes", self.edit_notes),
         ]:
@@ -154,12 +156,48 @@ class TasksPanel(tk.Frame):
         self.load()
         self.on_change()
 
+    def _click_status(self, event):
+        """Allow the status circle in the first column to act like a checkbox."""
+        if self.tree.identify_region(event.x, event.y) != "cell":
+            return
+        if self.tree.identify_column(event.x) != "#1":
+            return
+        item = self.tree.identify_row(event.y)
+        if not item:
+            return
+        self._selected_task_id = int(item)
+        db.toggle_task(self._selected_task_id)
+        self.load()
+        self.on_change()
+        return "break"
+
     def toggle_done(self):
         task = self._current_task()
         if task:
             db.toggle_task(task["id"])
             self.load()
             self.on_change()
+
+    def edit_due_date(self):
+        task = self._current_task()
+        if not task:
+            return
+        value = simpledialog.askstring(
+            "Set due date",
+            "Enter due date (YYYY-MM-DD). Leave blank to clear it:",
+            initialvalue=task["due"] or "",
+            parent=self,
+        )
+        if value is None:
+            return
+        try:
+            due = logic.valid_date(value)
+        except ValueError as exc:
+            messagebox.showerror("Invalid date", str(exc), parent=self)
+            return
+        db.update_task(task["id"], due=due)
+        self.load()
+        self.on_change()
 
     def edit_task(self):
         task = self._current_task()
