@@ -1,10 +1,21 @@
+import sys
 import tkinter as tk
-from tkinter import ttk, simpledialog, messagebox, filedialog
-from tkinter import font as tkfont
+from tkinter import filedialog, messagebox
 
 import db
 import errors
+import logic
+import settings
+import theme
 import transfer
+from sidebar import Sidebar
+from tasks_panel import TasksPanel
+
+
+def shortcut(widget, key, func):
+    """Bind Ctrl+<key>, also when Caps Lock is on."""
+    for k in (key.lower(), key.upper()):
+        widget.bind(f"<Control-{k}>", lambda event: func())
 
 
 class App(tk.Tk):
@@ -15,77 +26,62 @@ class App(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        self.title("Project Tracker")
-        self.geometry("700x450")
+        theme.setup(self)
+        self.title("ProdBuddy")
+        self.geometry(f"{theme.px(1120)}x{theme.px(760)}")
+        self.minsize(theme.px(900), theme.px(620))
 
-        self.project_ids = []   # project_ids[i] is the db id of listbox row i
-        self.current_project = None
+        self.settings = settings.load()
+        self.colors = theme.apply(self, self.settings["dark"])
 
-        self.build_projects_panel()
-        self.build_tasks_panel()
-        self.load_projects()
+        self.sidebar = Sidebar(
+            self,
+            on_select=self.show,
+            on_export=self.export_data,
+            on_import=self.import_data,
+            on_theme=self.set_dark,
+            dark=self.settings["dark"],
+        )
+        self.sidebar.pack(side="left", fill="y")
+        self.panel = TasksPanel(self, on_change=self.sidebar.refresh_today)
+        self.panel.pack(side="left", fill="both", expand=True)
+        self.panel.apply_colors(self.colors)
 
-    # ---------- layout ----------
-    def build_projects_panel(self):
-        left = tk.Frame(self)
-        left.pack(side="left", fill="y", padx=10, pady=10)
+        start = self.first_view()
+        self.sidebar.refresh(select=start)
+        self.panel.show(start)
 
-        tk.Label(left, text="Projects").pack()
-        self.project_list = tk.Listbox(left, width=25, exportselection=False)
-        self.project_list.pack(fill="y", expand=True)
-        self.project_list.bind("<<ListboxSelect>>", self.on_project_select)
+        shortcut(self, "n", self.panel.focus_quick_add)
+        shortcut(self, "f", self.panel.focus_search)
+        shortcut(self, "d", self.panel.toggle_done)
+        shortcut(self, "t", self.panel.toggle_timer)
+        shortcut(self, "e", self.panel.edit_task)
+        self.bind("<F2>", lambda event: self.panel.edit_task())
+        self.protocol("WM_DELETE_WINDOW", self.close)
 
-        tk.Button(left, text="Add Project", command=self.add_project).pack(fill="x")
-        tk.Button(left, text="Delete Project", command=self.delete_project).pack(fill="x")
-        tk.Button(left, text="Export JSON", command=self.export_data).pack(fill="x", pady=(10, 0))
-        tk.Button(left, text="Import JSON", command=self.import_data).pack(fill="x")
+    def first_view(self):
+        """Open on Today if something is due, otherwise on the first project."""
+        projects = db.get_projects()
+        if projects and not db.get_due_tasks(logic.today_iso()):
+            return projects[0]["id"]
+        return "today"
 
-    def build_tasks_panel(self):
-        right = tk.Frame(self)
-        right.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+    def show(self, view):
+        self.panel.show(view)
 
-        tk.Label(right, text="Tasks (double-click to strike off)").pack()
+    def set_dark(self, dark):
+        self.settings["dark"] = dark
+        settings.save(self.settings)
+        self.colors = theme.apply(self, dark)
+        self.panel.apply_colors(self.colors)
 
-        self.task_tree = ttk.Treeview(right, show="tree")
-        self.task_tree.pack(fill="both", expand=True)
-        self.task_tree.bind("<Double-1>", lambda e: self.toggle_task())
-
-        # A "done" tag = grey text with a line through it
-        strike = tkfont.Font(family="Segoe UI", size=10, overstrike=True)
-        self.task_tree.tag_configure("done", font=strike, foreground="gray")
-
-        tk.Button(right, text="Add Task", command=self.add_task).pack(side="left")
-        tk.Button(right, text="Toggle Done", command=self.toggle_task).pack(side="left")
-        tk.Button(right, text="Delete Task", command=self.delete_task).pack(side="left")
-
-    # ---------- projects ----------
-    def load_projects(self):
-        self.project_list.delete(0, "end")
-        self.project_ids = []
-        for pid, name in db.get_projects():
-            self.project_list.insert("end", name)
-            self.project_ids.append(pid)
-        self.load_tasks()
-
-    def on_project_select(self, event):
-        selected = self.project_list.curselection()
-        if selected:
-            self.current_project = self.project_ids[selected[0]]
-            self.load_tasks()
-
-    def add_project(self):
-        name = simpledialog.askstring("New project", "Project name:")
-        if name:
-            db.add_project(name)
-            self.load_projects()
-
-    def delete_project(self):
-        if self.current_project is None:
-            return
-        if messagebox.askyesno("Delete", "Delete this project and all its tasks?"):
-            db.delete_project(self.current_project)
-            self.current_project = None
-            self.load_projects()
+    def close(self):
+        try:
+            self.panel.save_notes()
+            db.stop_timer()  # a running timer is counted up to now
+        except Exception:
+            errors.log(*sys.exc_info())  # never block the window from closing
+        self.destroy()
 
     # ---------- export / import ----------
     def export_data(self):
@@ -107,35 +103,6 @@ class App(tk.Tk):
         except ValueError as e:  # bad file: friendly message, nothing was imported
             messagebox.showerror("Import failed", str(e))
             return
-        self.load_projects()
+        self.sidebar.refresh()
+        self.panel.load()
         messagebox.showinfo("Imported", f"Added {count} project(s).")
-
-    # ---------- tasks ----------
-    def load_tasks(self):
-        self.task_tree.delete(*self.task_tree.get_children())
-        if self.current_project is None:
-            return
-        for tid, title, done in db.get_tasks(self.current_project):
-            tags = ("done",) if done else ()
-            self.task_tree.insert("", "end", iid=str(tid), text=title, tags=tags)
-
-    def add_task(self):
-        if self.current_project is None:
-            messagebox.showinfo("Pick a project", "Select a project first.")
-            return
-        title = simpledialog.askstring("New task", "Task:")
-        if title:
-            db.add_task(self.current_project, title)
-            self.load_tasks()
-
-    def toggle_task(self):
-        selected = self.task_tree.selection()
-        if selected:
-            db.toggle_task(int(selected[0]))
-            self.load_tasks()
-
-    def delete_task(self):
-        selected = self.task_tree.selection()
-        if selected:
-            db.delete_task(int(selected[0]))
-            self.load_tasks()

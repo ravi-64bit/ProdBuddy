@@ -7,3 +7,4 @@ os.makedirs(FOLDER, exist_ok=True)
 
 DB_PATH = os.path.join(FOLDER, "tracker.db")
 LOG_PATH = os.path.join(FOLDER, "error.log")
+SETTINGS_PATH = os.path.join(FOLDER, "settings.json")
