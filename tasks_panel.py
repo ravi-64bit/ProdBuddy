@@ -149,7 +149,7 @@ class TasksPanel(tk.Frame):
                 project_id = choice
         else:
             project_id = int(self.view)
-        db.add_task(project_id, title)
+        db.add_task(project_id, title, due=logic.today_iso() if self.view == "today" else None)
         self.quick_entry.delete(0, tk.END)
         self.load()
         self.on_change()
