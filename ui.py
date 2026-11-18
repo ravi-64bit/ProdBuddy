@@ -43,6 +43,7 @@ class App(tk.Tk):
             dark=self.settings["dark"],
         )
         self.sidebar.pack(side="left", fill="y")
+        self.sidebar.apply_colors(self.colors)
         self.panel = TasksPanel(self, on_change=self.sidebar.refresh_today)
         self.panel.pack(side="left", fill="both", expand=True)
         self.panel.apply_colors(self.colors)
@@ -73,6 +74,7 @@ class App(tk.Tk):
         self.settings["dark"] = dark
         settings.save(self.settings)
         self.colors = theme.apply(self, dark)
+        self.sidebar.apply_colors(self.colors)
         self.panel.apply_colors(self.colors)
 
     def close(self):
