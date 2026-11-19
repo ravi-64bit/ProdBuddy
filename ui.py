@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 import db
+import os
 import errors
 import logic
 import settings
@@ -28,6 +29,13 @@ class App(tk.Tk):
         super().__init__()
         theme.setup(self)
         self.title("ProdBuddy")
+        self.logo_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "assets",
+            "logo.png"
+        )
+        self.logo_image=tk.PhotoImage(file=self.logo_path)
+        self.iconphoto(True, self.logo_image)
         self.geometry(f"{theme.px(1100)}x{theme.px(720)}")
         self.minsize(theme.px(920), theme.px(560))
 

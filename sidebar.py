@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 
 import db
+import os
 import theme
 
 
@@ -25,8 +26,40 @@ class Sidebar(tk.Frame):
         self._active_view = "today"
         self._project_ids = []
 
-        self.brand_label = ttk.Label(self, text="ProdBuddy", style="SidebarBrand.TLabel")
-        self.brand_label.pack(anchor="w", pady=(0, theme.px(14)))
+                # ---------- Brand / Logo ----------
+        brand_frame = ttk.Frame(self, style="Sidebar.TFrame")
+        brand_frame.pack(anchor="w", fill="x", pady=(0, theme.px(18)))
+
+        logo_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "assets",
+            "logo.png"
+        )
+
+        try:
+            from PIL import Image, ImageTk
+
+            logo_img = Image.open(logo_path)
+            logo_img = logo_img.resize((36, 36), Image.Resampling.LANCZOS)
+
+            self.logo_image = ImageTk.PhotoImage(logo_img)
+
+            self.logo_label = ttk.Label(
+                brand_frame,
+                image=self.logo_image,
+                style="SidebarBrand.TLabel"
+            )
+            self.logo_label.pack(side="left", padx=(0, theme.px(10)))
+
+        except Exception as e:
+            print(f"Could not load logo: {e}")
+
+        self.brand_label = ttk.Label(
+            brand_frame,
+            text="ProdBuddy",
+            style="SidebarBrand.TLabel"
+        )
+        self.brand_label.pack(side="left", pady=theme.px(5))
 
         self.today_btn = ttk.Button(
             self, text="Today", style="NavActive.TButton", command=lambda: self.select("today")
