@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 import db
+import os
 import errors
 import logic
 import settings
@@ -28,8 +29,15 @@ class App(tk.Tk):
         super().__init__()
         theme.setup(self)
         self.title("ProdBuddy")
-        self.geometry(f"{theme.px(1120)}x{theme.px(760)}")
-        self.minsize(theme.px(900), theme.px(620))
+        self.logo_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "assets",
+            "logo.png"
+        )
+        self.logo_image=tk.PhotoImage(file=self.logo_path)
+        self.iconphoto(True, self.logo_image)
+        self.geometry(f"{theme.px(1100)}x{theme.px(720)}")
+        self.minsize(theme.px(920), theme.px(560))
 
         self.settings = settings.load()
         self.colors = theme.apply(self, self.settings["dark"])
@@ -43,6 +51,8 @@ class App(tk.Tk):
             dark=self.settings["dark"],
         )
         self.sidebar.pack(side="left", fill="y")
+        self.sidebar.apply_colors(self.colors)
+
         self.panel = TasksPanel(self, on_change=self.sidebar.refresh_today)
         self.panel.pack(side="left", fill="both", expand=True)
         self.panel.apply_colors(self.colors)
@@ -73,6 +83,7 @@ class App(tk.Tk):
         self.settings["dark"] = dark
         settings.save(self.settings)
         self.colors = theme.apply(self, dark)
+        self.sidebar.apply_colors(self.colors)
         self.panel.apply_colors(self.colors)
 
     def close(self):
