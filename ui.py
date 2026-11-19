@@ -1,9 +1,8 @@
 import sys
 import tkinter as tk
-from tkinter import filedialog, messagebox
 
+import config
 import db
-import os
 import errors
 import logic
 import settings
@@ -19,9 +18,21 @@ def shortcut(widget, key, func):
         widget.bind(f"<Control-{k}>", lambda event: func())
 
 
+def load_scaled_icon(rel_path, target_px=24):
+    """Load a PNG with tk.PhotoImage and subsample cleanly without external deps."""
+    path = config.resource_path(rel_path)
+    try:
+        img = tk.PhotoImage(file=path)
+    except tk.TclError:
+        return None
+    w = max(1, img.width())
+    factor = max(1, round(w / max(1, target_px)))
+    if factor > 1:
+        img = img.subsample(factor, factor)
+    return img
+
+
 class App(tk.Tk):
-    # tkinter calls this when any button/event handler crashes.
-    # Without it, errors print to a console and the user sees nothing.
     def report_callback_exception(self, exc_type, exc, tb):
         errors.report(exc_type, exc, tb)
 
@@ -29,15 +40,15 @@ class App(tk.Tk):
         super().__init__()
         theme.setup(self)
         self.title("ProdBuddy")
-        self.logo_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "assets",
-            "logo.png"
-        )
-        self.logo_image=tk.PhotoImage(file=self.logo_path)
-        self.iconphoto(True, self.logo_image)
-        self.geometry(f"{theme.px(1100)}x{theme.px(720)}")
-        self.minsize(theme.px(920), theme.px(560))
+        self.geometry(f"{theme.px(1160)}x{theme.px(740)}")
+        self.minsize(theme.px(960), theme.px(580))
+
+        self.icon_image = load_scaled_icon("assets/logo.png", target_px=theme.px(32))
+        if self.icon_image is not None:
+            try:
+                self.iconphoto(True, self.icon_image)
+            except tk.TclError:
+                pass
 
         self.settings = settings.load()
         self.colors = theme.apply(self, self.settings["dark"])
@@ -81,39 +92,61 @@ class App(tk.Tk):
 
     def set_dark(self, dark):
         self.settings["dark"] = dark
-        settings.save(self.settings)
         self.colors = theme.apply(self, dark)
         self.sidebar.apply_colors(self.colors)
         self.panel.apply_colors(self.colors)
+        try:
+            settings.save(self.settings)
+        except Exception as exc:
+            errors.log(*sys.exc_info())
+            theme.show_message(
+                self,
+                "Settings not saved",
+                f"Theme was applied, but saving settings failed:\n{exc}",
+                kind="error",
+            )
 
     def close(self):
         try:
+            self.panel.stop_live_updates()
             self.panel.save_notes()
-            db.stop_timer()  # a running timer is counted up to now
+            db.stop_timer()
         except Exception:
-            errors.log(*sys.exc_info())  # never block the window from closing
+            errors.log(*sys.exc_info())
         self.destroy()
 
     # ---------- export / import ----------
     def export_data(self):
-        path = filedialog.asksaveasfilename(
-            defaultextension=".json",
-            filetypes=[("JSON", "*.json")],
-            initialfile="prodbuddy-export.json",
-        )
+        path = filedialog_save_json()
         if path:
             transfer.export_json(path)
-            messagebox.showinfo("Exported", f"Saved to:\n{path}")
+            theme.show_message(self, "Exported", f"Saved to:\n{path}")
 
     def import_data(self):
-        path = filedialog.askopenfilename(filetypes=[("JSON", "*.json")])
+        path = filedialog_open_json()
         if not path:
             return
         try:
             count = transfer.import_json(path)
-        except ValueError as e:  # bad file: friendly message, nothing was imported
-            messagebox.showerror("Import failed", str(e))
+        except ValueError as e:
+            theme.show_message(self, "Import failed", str(e), kind="error")
             return
         self.sidebar.refresh()
         self.panel.load()
-        messagebox.showinfo("Imported", f"Added {count} project(s).")
+        theme.show_message(self, "Imported", f"Added {count} project(s).")
+
+
+def filedialog_save_json():
+    from tkinter import filedialog
+
+    return filedialog.asksaveasfilename(
+        defaultextension=".json",
+        filetypes=[("JSON", "*.json")],
+        initialfile="prodbuddy-export.json",
+    )
+
+
+def filedialog_open_json():
+    from tkinter import filedialog
+
+    return filedialog.askopenfilename(filetypes=[("JSON", "*.json")])
