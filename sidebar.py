@@ -1,9 +1,8 @@
 """Navigation sidebar for ProdBuddy."""
 import tkinter as tk
-from tkinter import ttk, simpledialog, messagebox
+from tkinter import ttk
 
 import db
-import os
 import theme
 
 
@@ -25,41 +24,22 @@ class Sidebar(tk.Frame):
         self.colors = None
         self._active_view = "today"
         self._project_ids = []
+        self._logo_light = None
+        self._logo_dark = None
 
-                # ---------- Brand / Logo ----------
         brand_frame = ttk.Frame(self, style="Sidebar.TFrame")
-        brand_frame.pack(anchor="w", fill="x", pady=(0, theme.px(18)))
+        brand_frame.pack(anchor="w", fill="x", pady=(0, theme.px(16)))
 
-        logo_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "assets",
-            "logo.png"
-        )
-
-        try:
-            from PIL import Image, ImageTk
-
-            logo_img = Image.open(logo_path)
-            logo_img = logo_img.resize((36, 36), Image.Resampling.LANCZOS)
-
-            self.logo_image = ImageTk.PhotoImage(logo_img)
-
-            self.logo_label = ttk.Label(
-                brand_frame,
-                image=self.logo_image,
-                style="SidebarBrand.TLabel"
-            )
-            self.logo_label.pack(side="left", padx=(0, theme.px(10)))
-
-        except Exception as e:
-            print(f"Could not load logo: {e}")
+        self._load_logos()
+        self.logo_label = ttk.Label(brand_frame, style="SidebarBrand.TLabel")
+        self.logo_label.pack(side="left", padx=(0, theme.px(8)))
 
         self.brand_label = ttk.Label(
             brand_frame,
             text="ProdBuddy",
-            style="SidebarBrand.TLabel"
+            style="SidebarBrand.TLabel",
         )
-        self.brand_label.pack(side="left", pady=theme.px(5))
+        self.brand_label.pack(side="left")
 
         self.today_btn = ttk.Button(
             self, text="Today", style="NavActive.TButton", command=lambda: self.select("today")
@@ -128,6 +108,19 @@ class Sidebar(tk.Frame):
 
         self.refresh(select="today")
 
+    def _load_logos(self):
+        from ui import load_scaled_icon
+
+        size = theme.px(28)
+        self._logo_light = load_scaled_icon("assets/logo.png", target_px=size)
+        self._logo_dark = load_scaled_icon("assets/logo1.png", target_px=size) or self._logo_light
+
+    def _refresh_logo(self):
+        img = self._logo_dark if self.dark else self._logo_light
+        if img is not None:
+            self.logo_label.configure(image=img)
+            self.logo_label.image = img
+
     def _update_nav_styles(self):
         self.today_btn.configure(
             style="NavActive.TButton" if self._active_view == "today" else "Nav.TButton"
@@ -173,7 +166,7 @@ class Sidebar(tk.Frame):
         return None
 
     def add_project(self):
-        name = simpledialog.askstring("New project", "Project name:", parent=self)
+        name = theme.ask_text(self, "New project", "Project name:")
         if name and name.strip():
             project_id = db.add_project(name.strip())
             self.refresh(select=project_id)
@@ -186,11 +179,13 @@ class Sidebar(tk.Frame):
     def rename_project(self):
         project_id = self._selected_project_id()
         if project_id is None:
-            messagebox.showinfo("Select a project", "Choose a project first.", parent=self)
+            theme.show_message(self, "Select a project", "Choose a project first.")
             return
         project = db.get_project(project_id)
-        name = simpledialog.askstring(
-            "Rename project", "New name:", initialvalue=project["name"], parent=self
+        if project is None:
+            return
+        name = theme.ask_text(
+            self, "Rename project", "New name:", initialvalue=project["name"]
         )
         if name and name.strip():
             db.rename_project(project_id, name.strip())
@@ -200,11 +195,13 @@ class Sidebar(tk.Frame):
     def delete_project(self):
         project_id = self._selected_project_id()
         if project_id is None:
-            messagebox.showinfo("Select a project", "Choose a project first.", parent=self)
+            theme.show_message(self, "Select a project", "Choose a project first.")
             return
         project = db.get_project(project_id)
-        if messagebox.askyesno(
-            "Delete project", f"Delete '{project['name']}' and all its tasks?", parent=self
+        if project is None:
+            return
+        if theme.ask_yes_no(
+            self, "Delete project", f"Delete '{project['name']}' and all its tasks?"
         ):
             db.delete_project(project_id)
             self.refresh(select="today")
@@ -213,10 +210,12 @@ class Sidebar(tk.Frame):
     def toggle_theme(self):
         self.dark = not self.dark
         self.theme_button.configure(text="Light theme" if self.dark else "Dark theme")
+        self._refresh_logo()
         self.on_theme(self.dark)
 
     def apply_colors(self, colors):
         self.colors = colors
+        self._refresh_logo()
         self.configure(
             bg=colors["sidebar"],
             highlightbackground=colors["border"],

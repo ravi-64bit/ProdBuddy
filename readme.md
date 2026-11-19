@@ -10,18 +10,28 @@
                                                                                888 
                                                                           Y8b d88P 
                                                                            "Y88P"  </pre>
-ProdBuddy is a fast, clean, and fully local desktop productivity and task-management application built with Python and Tkinter. Designed with a modern, distraction-free interface (supporting both light and dark themes), it helps you track daily tasks, manage multi-project workflows, and log work hours with a built-in time tracker.
 
 ---
+ProdBuddy is a zero-install local desktop task manager and time tracker built with Python and Tkinter. It supports light and dark themes, subtasks, tags, live stopwatch timing, daily SQLite backups, and JSON export/import.
+
 
 ## Features
 
-- **Dual Views**: Switch instantly between the **Today** view (focused on due and overdue tasks) and **All tasks** or individual **Projects**.
-- **Time Tracking**: Built-in stopwatch timer per task to track exact hours and minutes spent.
-- **Subtasks & Notes**: Organize complex goals with subtasks, detailed notes, and comma-separated tags (`#work`, `#home`).
-- **Theme Support**: Seamlessly toggle between Light and Dark themes with persistent preferences.
-- **Robust Local Storage**: SQLite backend with automatic daily backups, WAL journaling mode, and JSON export/import support.
-- **Keyboard Shortcuts**: Quick navigation and task management without taking your hands off the keyboard.
+- **Views**: Switch between **Today** (due and overdue unfinished tasks), **All tasks**, or individual **Projects**, with a **Project** column and project selector dropdown when adding from multi-project views.
+- **Subtasks & Tags**: Create subtasks under tasks and organize items with comma-separated tags (`work`, `urgent`, `#home`) and multi-line task notes.
+- **Live Timer**: Start and stop a per-task timer with live elapsed seconds in the status bar and **Tracked** column, plus visual highlight on the active task.
+- **Light & Dark Themes**: Toggle between light and dark palettes with custom themed dialogs and automatic logo switching.
+- **Safe Storage & Transfer**: SQLite database in `%APPDATA%\ProdBuddy\tracker.db` with automatic daily backups (keeping the 7 newest) and JSON export/import.
 
 ---
 
+## Getting Started
+
+### Prerequisites
+
+- Python 3.8 or higher (uses standard library `tkinter` and `sqlite3` — no extra `pip install` needed).
+
+### Run Locally
+
+```bash
+python main.py
