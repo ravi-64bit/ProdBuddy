@@ -2,7 +2,7 @@ import os
 import sys
 
 # Store ProdBuddy data files inside a ProdBuddy folder on the user's Desktop
-DESKTOP_DIR = os.path.join(os.path.expanduser("~"), "Desktop")
+DESKTOP_DIR = os.path.join(os.path.expanduser("~"), "Documents")
 FOLDER = os.path.join(DESKTOP_DIR, "ProdBuddy")
 os.makedirs(FOLDER, exist_ok=True)
 
