@@ -1,6 +1,7 @@
 """Main task workspace for ProdBuddy."""
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
+from tkinter import font as tkfont
 
 import db
 import logic
@@ -15,6 +16,8 @@ class TasksPanel(tk.Frame):
         self._rows = []
         self._selected_task_id = None
         self._colors = None
+        # Same font as the list (see theme.py) plus a line through it, for completed tasks.
+        self._strike_font = tkfont.Font(family="Segoe UI", size=10, overstrike=True)
 
         # Header
         header = ttk.Frame(self)
@@ -316,5 +319,5 @@ class TasksPanel(tk.Frame):
     def apply_colors(self, colors):
         self._colors = colors
         self.configure(bg=colors["bg"])
-        self.tree.tag_configure("done", foreground=colors["muted"])
+        self.tree.tag_configure("done", foreground=colors["muted"], font=self._strike_font)
         self._refresh_timer_label()
