@@ -21,17 +21,24 @@ ProdBuddy is a zero-install local desktop task manager and time tracker built wi
 - **Subtasks & Tags**: Create subtasks under tasks and organize items with comma-separated tags (`work`, `urgent`, `#home`) and multi-line task notes.
 - **Live Timer**: Start and stop a per-task timer with live elapsed seconds in the status bar and **Tracked** column, plus visual highlight on the active task.
 - **Light & Dark Themes**: Toggle between light and dark palettes with custom themed dialogs and automatic logo switching.
-- **Safe Storage & Transfer**: SQLite database in `%APPDATA%\ProdBuddy\tracker.db` with automatic daily backups (keeping the 7 newest) and JSON export/import.
+- **Safe Storage & Transfer**: SQLite database in `Documents\ProdBuddy\tracker.db` with automatic daily backups (keeping the 7 newest) and JSON export/import.
 
 ---
 
 ## Getting Started
+Go the releases page at https://github.com/ravi-64bit/ProdBuddy/releases/
 
-### Prerequisites
+- Download the `.zip` file.
+- Find a `.exe` file in the folder. Running this does not require Python or anything to be installed.
+- Run it to run the application.
+- If Windows SmartScreen prompts "Windows protected your PC", just click **more info** and click **Run Anyway**.
+
+### Prerequisites to run ProdBuddy locally 
 
 - Python 3.8 or higher (uses standard library `tkinter` and `sqlite3` — no extra `pip install` needed).
 
 ### Run Locally
 
+- Clone the repo with `git clone ` and run the following.
 ```bash
 python main.py
