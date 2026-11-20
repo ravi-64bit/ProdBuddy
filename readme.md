@@ -25,6 +25,10 @@ ProdBuddy is a zero-install local desktop task manager and time tracker built wi
 
 ---
 
+## Home page
+<img width="2560" height="1600" alt="image" src="https://github.com/user-attachments/assets/fcf83d62-212f-4e52-8946-78556ea21182" />
+
+
 ## Getting Started
 Go the releases page at https://github.com/ravi-64bit/ProdBuddy/releases/
 
